@@ -1,116 +1,182 @@
 import telebot
 import TOKEN
-import random, glob
-
+import random
+import glob
+import os
 from telebot import types
 from telebot.types import InputMediaPhoto
 
 bot = telebot.TeleBot(TOKEN.TOKEN)
 
+# Константы
+ADMIN_ID = 382889134
+PHOTOS_FILE = 'photo.txt'
+PHOTOS_DIR = 'photo'
+VIDEOS_DIR = 'video'
+
+# Создаем директории если их нет
+os.makedirs(PHOTOS_DIR, exist_ok=True)
+os.makedirs(VIDEOS_DIR, exist_ok=True)
+
+def get_random_photos(count=1):
+    """Получает случайные фотографии из файла"""
+    with open(PHOTOS_FILE, 'r') as f:
+        photos = [line.strip() for line in f.readlines()]
+    return random.sample(photos, min(count, len(photos))) if count > 1 else random.choice(photos)
+
+def create_media_group(photos, start_index=0):
+    """Создает группу медиа для отправки"""
+    return [InputMediaPhoto(photo) for photo in photos]
+
 @bot.message_handler(commands=['start'])
 def welcome(message):
-    sti = open('static/sticker.webp', 'rb')
-    bot.send_sticker(message.chat.id, sti)
-    print('REGISTR_USER | ', message.chat.id, " |  {0.first_name}".format(message.from_user, bot.get_me()))
-
-    # keyboard
+    # Отправка стикера
+    with open('static/sticker.webp', 'rb') as sti:
+        bot.send_sticker(message.chat.id, sti)
+    
+    print(f'REGISTR_USER | {message.chat.id} | {message.from_user.first_name}')
+    
+    # Создание клавиатуры
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    photo = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    like = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    item2 = types.KeyboardButton("Хочу фото🙀")
-    item1 = types.KeyboardButton("/help")
-    item3 = types.KeyboardButton("/developer")
-    item4 = types.KeyboardButton("/photo_10")
-    item5 = types.KeyboardButton("/photoX")
+    markup.add(
+        types.KeyboardButton("Хочу фото🙀"),
+        types.KeyboardButton("/help"),
+        types.KeyboardButton("/developer")
+    )
+    
+    bot.send_message(
+        message.chat.id,
+        f"Добро пожаловать, {message.from_user.first_name}!\n"
+        f"Я - {bot.get_me().first_name}, бот созданный чтобы показывать чудесные фотографии.\n"
+        "Список всех доступных команд: /help",
+        parse_mode='html',
+        reply_markup=markup
+    )
 
-    markup.add(item1, item2, item3)
-    photo.add(item4, item2, item5)
+@bot.message_handler(commands=['photo'])
+def send_photo(message):
+    bot.send_message(message.chat.id, 'Ожидайте фотографию...')
+    photo = get_random_photos()
+    bot.send_photo(message.chat.id, photo)
+    print(f'Photo | User: {message.chat.id} | {message.from_user.first_name}')
 
-    bot.send_message(message.chat.id, "Добро пожаловать, {0.first_name}!\nЯ - <b>{1.first_name}</b>, бот созданный чтобы показывать чудесные фотографии.\nСписок всех доступных команд: /help".format(message.from_user, bot.get_me()),
-        parse_mode='html', reply_markup=markup)
+@bot.message_handler(commands=['photo_10'])
+def send_10_photos(message):
+    bot.send_message(message.chat.id, 'Загружаю 10 фотографий...')
+    photos = get_random_photos(10)
+    media = create_media_group(photos)
+    bot.send_media_group(message.chat.id, media)
+    print('Альбом (10 фото)')
 
-@bot.message_handler(content_types=['text'])
-def lalala(message):
-    if message.chat.type == 'private':
-        if message.text == 'Хочу фото🙀':
-            #bot.send_message(message.chat.id, 'Фото')
-            bot.send_message(message.chat.id, 'Ожидайте фотографию...')
-            #photo = open('photo/photo.jpg', 'rb')
-            #bot.send_photo(message.chat.id, photo)
-            photo = (random.choice(list(open('photo.txt'))))
-            bot.send_photo(message.chat.id, photo)
-            print('Photo: ', '|  User: ', message.chat.id, " |  {0.first_name}".format(message.from_user, bot.get_me()))
-        if message.text == '/photo':
-            #bot.send_message(message.chat.id, 'Фото')
-            bot.send_message(message.chat.id, 'Ожидайте фотографию...')
-            #photo = open('photo/photo.jpg', 'rb')
-            #bot.send_photo(message.chat.id, photo)
-            photo = (random.choice(list(open('photo.txt'))))
-            bot.send_photo(message.chat.id, photo)
-            print('Photo: ', '|  User: ', message.chat.id, " |  {0.first_name}".format(message.from_user, bot.get_me()))
+@bot.message_handler(commands=['photoX'])
+def send_30_photos(message):
+    bot.send_message(message.chat.id, 'Загружаю 30 фотографий...')
+    bot.send_message(message.chat.id, 'Это может занять продолжительное время...')
+    
+    photos = get_random_photos(30)
+    
+    # Отправляем по 10 фото в группе
+    for i in range(0, 30, 10):
+        media = create_media_group(photos[i:i+10])
+        bot.send_media_group(message.chat.id, media)
+    
+    print('АльбомX (30 фото)')
 
-        #else:
-        #    bot.send_message(message.chat.id, 'Я не знаю что ответить 😢')       
-        if message.text == '/photo_10':
-            bot.send_message(message.chat.id, 'Загружаю 10 фотографий...')
-            
-            rand = [1,2,3,4,5,6,7,8,9,10]
-            for i in range(len(rand)):
-                rand[i] = (random.choice(list(open('photo.txt'))))
-            media = [InputMediaPhoto(rand[1]), InputMediaPhoto(rand[2]), InputMediaPhoto(rand[3]), InputMediaPhoto(rand[4]), InputMediaPhoto(rand[5]), InputMediaPhoto(rand[6]), InputMediaPhoto(rand[7]), InputMediaPhoto(rand[8]), InputMediaPhoto(rand[9]), InputMediaPhoto(rand[0])]
-            bot.send_media_group(message.chat.id, media)
-            print('Альбом') 
-        if message.text == '/developer':
-            bot.send_message(message.chat.id,'Автор данного бота: 😵 Nikita 😵\n"Это мой один из первых Telegram Bot написанный на python."\nСсылка на автора: @bog_0001')
-        if message.text == '/help':
-            bot.send_message(message.chat.id, 'Доступные команды:\n/start\n/photo\n/photo_10\n/photoX\n/download_photo\n/developer')
-            
-        if message.text == '/download_photo':
-            bot.send_message(message.chat.id,'Загрузка фотографий в Telegram Bot разрешена только админам данного бота!')
-        if message.text == '/photoX':
-            bot.send_message(message.chat.id, 'Ожидайте фотографии...')
-            
-            rand = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
-            for i in range(len(rand)):
-                rand[i] = (random.choice(list(open('photo.txt'))))
-            media = [InputMediaPhoto(rand[0]), InputMediaPhoto(rand[1]), InputMediaPhoto(rand[2]), InputMediaPhoto(rand[3]), InputMediaPhoto(rand[4]), InputMediaPhoto(rand[5]), InputMediaPhoto(rand[6]), InputMediaPhoto(rand[7]), InputMediaPhoto(rand[8]), InputMediaPhoto(rand[9])]
-            media2 = [InputMediaPhoto(rand[10]), InputMediaPhoto(rand[11]), InputMediaPhoto(rand[12]), InputMediaPhoto(rand[13]), InputMediaPhoto(rand[14]), InputMediaPhoto(rand[15]), InputMediaPhoto(rand[16]), InputMediaPhoto(rand[17]), InputMediaPhoto(rand[18]), InputMediaPhoto(rand[19])]
-            media3 = [InputMediaPhoto(rand[20]), InputMediaPhoto(rand[21]), InputMediaPhoto(rand[22]), InputMediaPhoto(rand[23]), InputMediaPhoto(rand[24]), InputMediaPhoto(rand[25]), InputMediaPhoto(rand[26]), InputMediaPhoto(rand[27]), InputMediaPhoto(rand[28]), InputMediaPhoto(rand[29])]
-            bot.send_message(message.chat.id, 'Загружаю 30 фотографий')
-            bot.send_message(message.chat.id, 'Это может занять продолжительное время...')
-            bot.send_media_group(message.chat.id, media)
-            bot.send_media_group(message.chat.id, media2)
-            bot.send_media_group(message.chat.id, media3)
-            print('АльбомX')   
+@bot.message_handler(commands=['developer'])
+def developer_info(message):
+    bot.send_message(
+        message.chat.id,
+        'Автор данного бота: 😵 Nikita 😵\n'
+        '"Это мой один из первых Telegram Bot написанный на python."\n'
+        'Ссылка на автора: @bog_0001'
+    )
+
+@bot.message_handler(commands=['help'])
+def help_command(message):
+    help_text = (
+        'Доступные команды:\n'
+        '/start\n'
+        '/photo\n'
+        '/photo_10\n'
+        '/photoX\n'
+        '/download_photo\n'
+        '/developer'
+    )
+    bot.send_message(message.chat.id, help_text)
+
+@bot.message_handler(commands=['download_photo'])
+def download_info(message):
+    bot.send_message(
+        message.chat.id,
+        'Загрузка фотографий в Telegram Bot разрешена только админам данного бота!'
+    )
+
+def handle_file_upload(message, file_type):
+    """Общий обработчик загрузки файлов"""
+    if message.chat.id != ADMIN_ID:
+        bot.send_message(message.chat.id, 'Отказано в доступе!')
+        return
+    
+    bot.send_message(message.chat.id, 'Добро пожаловать, хозяин!')
+    
+    if file_type == 'photo':
+        file_id = message.photo[-1].file_id
+        file_extension = 'jpg'
+        directory = PHOTOS_DIR
+    else:  # video
+        file_id = message.video.file_id
+        file_extension = 'mp4'
+        directory = VIDEOS_DIR
+    
+    file_info = bot.get_file(file_id)
+    downloaded_file = bot.download_file(file_info.file_path)
+    
+    filename = f"{file_id}.{file_extension}"
+    filepath = os.path.join(directory, filename)
+    
+    with open(filepath, 'wb') as new_file:
+        new_file.write(downloaded_file)
+    
+    print(f'Получен новый {file_type} | {file_id}')
+    bot.send_message(message.chat.id, f'Успешно загружено как {filename}')
 
 @bot.message_handler(content_types=['photo'])
-def photo(message):
-    admin = 382889134
-    user = message.chat.id
-    if user == admin:
-        bot.send_message(message.chat.id,'Добро пожаловать хозяйн!')
-        fileID = message.photo[-1].file_id
-        file_info = bot.get_file(fileID)
-        downloaded_file = bot.download_file(file_info.file_path)
-        print ('Получена новая фотография | ',fileID)
-        with open("photo/"+fileID+".jpg", 'wb') as new_file:
-            new_file.write(downloaded_file)
-        bot.send_message(message.chat.id, 'Успешно загружено.')
-        #else:
-            #   bot.send_message(message.chat.id, 'Отказано в доступе!')
+def handle_photo(message):
+    handle_file_upload(message, 'photo')
+
 @bot.message_handler(content_types=['video'])
-def video(message):
-    admin = 382889134
-    user = message.chat.id
-    if user == admin:
-        bot.send_message(message.chat.id,'Добро пожаловать хозяйн!')
-        fileID = message.video.file_id
-        file_info = bot.get_file(fileID)
-        downloaded_file = bot.download_file(file_info.file_path)
-        print ('Получена новое видео | ',fileID)
-        with open("video/"+fileID+".mp4", 'wb') as new_file:
-            new_file.write(downloaded_file)
-        bot.send_message(message.chat.id, 'Успешно загружено.')
+def handle_video(message):
+    handle_file_upload(message, 'video')
+
+@bot.message_handler(content_types=['text'])
+def handle_text(message):
+    if message.chat.type != 'private':
+        return
     
-# RUN
-bot.polling(none_stop=True) 
+    text_handlers = {
+        'Хочу фото🙀': send_photo,
+        '/photo': send_photo,
+        '/photo_10': send_10_photos,
+        '/photoX': send_30_photos,
+        '/developer': developer_info,
+        '/help': help_command,
+        '/download_photo': download_info
+    }
+    
+    if message.text in text_handlers:
+        # Создаем имитацию объекта message для обработчика
+        class FakeMessage:
+            def __init__(self, original, command):
+                self.chat = original.chat
+                self.from_user = original.from_user
+                self.text = command
+        
+        fake_msg = FakeMessage(message, message.text)
+        text_handlers[message.text](fake_msg)
+    else:
+        bot.send_message(message.chat.id, 'Я не знаю что ответить 😢')
+
+# Запуск бота
+if __name__ == '__main__':
+    print('Бот запущен...')
+    bot.polling(none_stop=True)
