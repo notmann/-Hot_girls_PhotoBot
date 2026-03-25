@@ -88,7 +88,7 @@ def developer_info(message):
         message.chat.id,
         'Автор данного бота: 😵 Nikita 😵\n'
         '"Это мой один из первых Telegram Bot написанный на python."\n'
-        'Ссылка на автора: @bog_0001'
+        'Ссылка на автора: @boynikita76'
     )
 
 @bot.message_handler(commands=['help'])
